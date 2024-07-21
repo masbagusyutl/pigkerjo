@@ -24,7 +24,7 @@ def take_task(headers, task_payload):
     if response.status_code == 200:
         print(f'Task {task_payload["TaskID"]} taken successfully.')
     else:
-        print(f'Failed to take task {task_payload["TaskID"]}.')
+        print(f'Failed to take task {task_payload["TaskID"]}. Status code: {response.status_code}')
 
 # Function to complete a task
 def complete_task(headers, task_payload):
@@ -33,15 +33,11 @@ def complete_task(headers, task_payload):
     if response.status_code == 200:
         print(f'Task {task_payload["TaskID"]} completed successfully.')
     else:
-        print(f'Failed to complete task {task_payload["TaskID"]}.')
+        print(f'Failed to complete task {task_payload["TaskID"]}. Status code: {response.status_code}')
 
 # Function to handle tasks for each account
 def handle_tasks(authorization, account_index, total_accounts):
     headers = {
-        ':authority': 'api.prod.piggypiggy.io',
-        ':method': 'POST',
-        ':path': '/game/CompleteTask',
-        ':scheme': 'https',
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate, br, zstd',
         'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
