@@ -16,6 +16,7 @@ def countdown(seconds):
         print(f'Countdown: {timer}', end='\r')
         time.sleep(1)
         seconds -= 1
+    print(' ' * 20, end='\r')  # Clear the countdown line
 
 # Function to take a task
 def take_task(headers, task_payload):
@@ -71,13 +72,17 @@ def handle_tasks(authorization, account_index, total_accounts):
     for task_id, delay in tasks:
         task_payload = {"TaskID": task_id, "PlayerID": 0}
         take_task(headers, task_payload)
+        
+        print('Waiting 30 seconds before completing the task...')
+        countdown(30)
+        
         complete_task(headers, task_payload)
         
         next_task_time = datetime.now() + timedelta(seconds=delay)
         print(f'Next task {task_id} in: {next_task_time.strftime("%Y-%m-%d %H:%M:%S")}')
         
-        print('Waiting 30 seconds before next task...')
-        countdown(30)
+    print('Waiting 15 seconds before switching accounts...')
+    countdown(15)
 
 # Main script execution
 def main():
@@ -86,9 +91,6 @@ def main():
 
     for i, authorization in enumerate(authorization_tokens):
         handle_tasks(authorization, i, total_accounts)
-        if i < total_accounts - 1:
-            print('Waiting 15 seconds before switching accounts...')
-            countdown(15)
 
 if __name__ == '__main__':
     main()
