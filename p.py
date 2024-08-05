@@ -2,44 +2,52 @@ import requests
 import time
 import json
 from datetime import datetime, timedelta
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, unquote
 
 # Function to load and decode login payload from a file
 def load_login_payload(file_path):
     with open(file_path, 'r') as file:
-        line = file.readline().strip()
-        params = parse_qs(line)
+        lines = file.readlines()
+        if not lines:
+            raise ValueError("File is empty.")
         
-        # Extract all required fields
-        user = params.get('user', [None])[0]
-        chat_instance = params.get('chat_instance', [None])[0]
-        chat_type = params.get('chat_type', [None])[0]
-        start_param = params.get('start_param', [None])[0]
-        auth_date = params.get('auth_date', [None])[0]
-        hash_val = params.get('hash', [None])[0]
-        invite_id = params.get('invite_id', [None])[0]
-        query_id = params.get('query_id', [None])[0]
-
-        if None in (user, auth_date, hash_val, invite_id):
-            raise ValueError("Incomplete login payload in file.")
+        login_payloads = []
+        for line in lines:
+            line = line.strip()
+            params = parse_qs(line)
+            
+            # Extract all required fields
+            user = params.get('user', [None])[0]
+            chat_instance = params.get('chat_instance', [None])[0]
+            chat_type = params.get('chat_type', [None])[0]
+            start_param = params.get('start_param', [None])[0]
+            auth_date = params.get('auth_date', [None])[0]
+            hash_val = params.get('hash', [None])[0]
+            invite_id = params.get('invite_id', [None])[0]
+            query_id = params.get('query_id', [None])[0]
+            
+            if None in (user, auth_date, hash_val, invite_id):
+                raise ValueError("Incomplete login payload in file.")
+            
+            # Prepare the login payload
+            login_payload = {
+                'user': user,
+                'auth_date': auth_date,
+                'hash': hash_val,
+                'invite_id': invite_id
+            }
+            if chat_instance:
+                login_payload['chat_instance'] = chat_instance
+            if chat_type:
+                login_payload['chat_type'] = chat_type
+            if start_param:
+                login_payload['start_param'] = start_param
+            if query_id:
+                login_payload['query_id'] = query_id
+            
+            login_payloads.append(login_payload)
         
-        # Prepare the login payload
-        login_payload = {
-            'user': user,
-            'auth_date': auth_date,
-            'hash': hash_val,
-            'invite_id': invite_id
-        }
-        if chat_instance:
-            login_payload['chat_instance'] = chat_instance
-        if chat_type:
-            login_payload['chat_type'] = chat_type
-        if start_param:
-            login_payload['start_param'] = start_param
-        if query_id:
-            login_payload['query_id'] = query_id
-        
-        return login_payload
+        return login_payloads
 
 # Function to login and get authorization token
 def login_and_get_token(login_url, login_payload):
@@ -160,22 +168,22 @@ def main():
     login_file_path = 'data.txt'
     login_url = 'https://api.prod.piggypiggy.io/tgBot/login'
     
-    # Load login payload from file
+    # Load login payloads from file
     try:
-        login_payload = load_login_payload(login_file_path)
+        login_payloads = load_login_payload(login_file_path)
     except ValueError as e:
-        print(f"Error loading login payload: {e}")
+        print(f"Error loading login payloads: {e}")
         return
 
-    # Get token from login
-    token = login_and_get_token(login_url, login_payload)
-    if not token:
-        return
-    
-    # Save token to file
-    save_token_to_file('data.txt', token)
+    for login_payload in login_payloads:
+        # Get token from login
+        token = login_and_get_token(login_url, login_payload)
+        if not token:
+            continue
+        
+        # Save token to file
+        save_token_to_file('data.txt', token)
 
-    while True:
         # Read authorization tokens from file
         authorization_tokens = read_authorizations('data.txt')
         total_accounts = len(authorization_tokens)
