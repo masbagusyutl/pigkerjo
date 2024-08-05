@@ -10,6 +10,7 @@ def load_login_payload(file_path):
         line = file.readline().strip()
         params = parse_qs(line)
         
+        # Extract all required fields, providing default values if missing
         user = params.get('user', [None])[0]
         chat_instance = params.get('chat_instance', [None])[0]
         chat_type = params.get('chat_type', [None])[0]
@@ -17,19 +18,27 @@ def load_login_payload(file_path):
         auth_date = params.get('auth_date', [None])[0]
         hash_val = params.get('hash', [None])[0]
         invite_id = params.get('invite_id', [None])[0]
+        query_id = params.get('query_id', [None])[0]
         
-        if None in (user, chat_instance, chat_type, start_param, auth_date, hash_val, invite_id):
+        if None in (user, auth_date, hash_val, invite_id):
             raise ValueError("Incomplete login payload in file.")
         
+        # Prepare the login payload
         login_payload = {
             'user': user,
-            'chat_instance': chat_instance,
-            'chat_type': chat_type,
-            'start_param': start_param,
             'auth_date': auth_date,
             'hash': hash_val,
             'invite_id': invite_id
         }
+        if chat_instance:
+            login_payload['chat_instance'] = chat_instance
+        if chat_type:
+            login_payload['chat_type'] = chat_type
+        if start_param:
+            login_payload['start_param'] = start_param
+        if query_id:
+            login_payload['query_id'] = query_id
+        
         return login_payload
 
 # Function to login and get authorization token
