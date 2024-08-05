@@ -10,7 +10,7 @@ def load_login_payload(file_path):
         line = file.readline().strip()
         params = parse_qs(line)
         
-        # Extract all required fields, providing default values if missing
+        # Extract all required fields
         user = params.get('user', [None])[0]
         chat_instance = params.get('chat_instance', [None])[0]
         chat_type = params.get('chat_type', [None])[0]
@@ -19,7 +19,7 @@ def load_login_payload(file_path):
         hash_val = params.get('hash', [None])[0]
         invite_id = params.get('invite_id', [None])[0]
         query_id = params.get('query_id', [None])[0]
-        
+
         if None in (user, auth_date, hash_val, invite_id):
             raise ValueError("Incomplete login payload in file.")
         
@@ -137,7 +137,6 @@ def handle_tasks(authorization, account_index, total_accounts):
     ]
 
     print(f'Processing account {account_index + 1} of {total_accounts}')
-    previous_task_end_time = datetime.now()
     
     for task_id, delay in tasks:
         task_payload = {"TaskID": task_id, "PlayerID": 0}
