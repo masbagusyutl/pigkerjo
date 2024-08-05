@@ -8,13 +8,9 @@ from urllib.parse import parse_qs
 def load_login_payload(file_path):
     with open(file_path, 'r') as file:
         line = file.readline().strip()
-        # Parse the URL-encoded string into a dictionary
         params = parse_qs(line)
-        # Extract the 'user' parameter and decode it from URL encoding
-        user_param = params.get('user', [])[0]
-        # Create the login payload dictionary
         login_payload = {
-            'user': user_param,
+            'user': params.get('user', [])[0],
             'chat_instance': params.get('chat_instance', [''])[0],
             'chat_type': params.get('chat_type', [''])[0],
             'start_param': params.get('start_param', [''])[0],
@@ -65,9 +61,18 @@ def take_task(headers, task_payload):
     url = 'https://api.prod.piggypiggy.io/game/TakeTask'
     response = requests.post(url, headers=headers, json=task_payload)
     if response.status_code == 200:
-        print(f'Task {task_payload["TaskID"]} taken successfully.')
+        data = response.json()
+        if 'curTaskStartTime' in data:
+            cur_task_start_time = data['curTaskStartTime']
+            cur_task_start_time = datetime.fromtimestamp(cur_task_start_time / 1000)
+            print(f'Task {task_payload["TaskID"]} taken successfully. Start Time: {cur_task_start_time}')
+            return cur_task_start_time
+        else:
+            print(f'Task {task_payload["TaskID"]} taken but start time not received.')
+            return None
     else:
         print(f'Failed to take task {task_payload["TaskID"]}. Status code: {response.status_code}')
+        return None
 
 # Function to complete a task
 def complete_task(headers, task_payload):
@@ -111,20 +116,24 @@ def handle_tasks(authorization, account_index, total_accounts):
     ]
 
     print(f'Processing account {account_index + 1} of {total_accounts}')
+    previous_task_end_time = datetime.now()
+    
     for task_id, delay in tasks:
         task_payload = {"TaskID": task_id, "PlayerID": 0}
-        take_task(headers, task_payload)
+        cur_task_start_time = take_task(headers, task_payload)
         
-        print('Waiting 30 seconds before completing the task...')
-        countdown(30)
+        if cur_task_start_time:
+            next_task_time = cur_task_start_time + timedelta(seconds=delay)
+            wait_time = (next_task_time - datetime.now()).total_seconds()
+            
+            if wait_time > 0:
+                print(f'Waiting {wait_time} seconds before completing the task...')
+                countdown(int(wait_time))
         
         complete_task(headers, task_payload)
         
-        next_task_time = datetime.now() + timedelta(seconds=delay)
-        print(f'Next task {task_id} in: {next_task_time.strftime("%Y-%m-%d %H:%M:%S")}')
-        
-    print('Waiting 15 seconds before switching accounts...')
-    countdown(15)
+        print('Waiting 5 seconds before switching accounts...')
+        countdown(5)
 
 # Main script execution
 def main():
@@ -142,13 +151,18 @@ def main():
     # Save token to file
     save_token_to_file('data.txt', token)
 
-    # Read authorization tokens from file
-    authorization_tokens = read_authorizations('data.txt')
-    total_accounts = len(authorization_tokens)
+    while True:
+        # Read authorization tokens from file
+        authorization_tokens = read_authorizations('data.txt')
+        total_accounts = len(authorization_tokens)
 
-    # Handle tasks for each account
-    for i, authorization in enumerate(authorization_tokens):
-        handle_tasks(authorization, i, total_accounts)
+        # Handle tasks for each account
+        for i, authorization in enumerate(authorization_tokens):
+            handle_tasks(authorization, i, total_accounts)
+
+        # Countdown 1 hour before restarting
+        print('All accounts processed. Starting 1-hour countdown...')
+        countdown(3600)
 
 if __name__ == '__main__':
     main()
