@@ -9,14 +9,26 @@ def load_login_payload(file_path):
     with open(file_path, 'r') as file:
         line = file.readline().strip()
         params = parse_qs(line)
+        
+        user = params.get('user', [None])[0]
+        chat_instance = params.get('chat_instance', [None])[0]
+        chat_type = params.get('chat_type', [None])[0]
+        start_param = params.get('start_param', [None])[0]
+        auth_date = params.get('auth_date', [None])[0]
+        hash_val = params.get('hash', [None])[0]
+        invite_id = params.get('invite_id', [None])[0]
+        
+        if None in (user, chat_instance, chat_type, start_param, auth_date, hash_val, invite_id):
+            raise ValueError("Incomplete login payload in file.")
+        
         login_payload = {
-            'user': params.get('user', [])[0],
-            'chat_instance': params.get('chat_instance', [''])[0],
-            'chat_type': params.get('chat_type', [''])[0],
-            'start_param': params.get('start_param', [''])[0],
-            'auth_date': params.get('auth_date', [''])[0],
-            'hash': params.get('hash', [''])[0],
-            'invite_id': params.get('invite_id', [''])[0]
+            'user': user,
+            'chat_instance': chat_instance,
+            'chat_type': chat_type,
+            'start_param': start_param,
+            'auth_date': auth_date,
+            'hash': hash_val,
+            'invite_id': invite_id
         }
         return login_payload
 
@@ -141,7 +153,11 @@ def main():
     login_url = 'https://api.prod.piggypiggy.io/tgBot/login'
     
     # Load login payload from file
-    login_payload = load_login_payload(login_file_path)
+    try:
+        login_payload = load_login_payload(login_file_path)
+    except ValueError as e:
+        print(f"Error loading login payload: {e}")
+        return
 
     # Get token from login
     token = login_and_get_token(login_url, login_payload)
