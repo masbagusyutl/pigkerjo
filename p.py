@@ -2,16 +2,17 @@ import requests
 import time
 import json
 from datetime import datetime, timedelta
-from urllib.parse import parse_qs, unquote
+from urllib.parse import parse_qs
 
 # Function to load and decode login payload from a file
 def load_login_payload(file_path):
+    login_payloads = []
+    
     with open(file_path, 'r') as file:
         lines = file.readlines()
         if not lines:
             raise ValueError("File is empty.")
         
-        login_payloads = []
         for line in lines:
             line = line.strip()
             params = parse_qs(line)
@@ -47,7 +48,7 @@ def load_login_payload(file_path):
             
             login_payloads.append(login_payload)
         
-        return login_payloads
+    return login_payloads
 
 # Function to login and get authorization token
 def login_and_get_token(login_url, login_payload):
@@ -175,26 +176,27 @@ def main():
         print(f"Error loading login payloads: {e}")
         return
 
-    for login_payload in login_payloads:
-        # Get token from login
-        token = login_and_get_token(login_url, login_payload)
-        if not token:
-            continue
-        
-        # Save token to file
-        save_token_to_file('data.txt', token)
+    while True:
+        for login_payload in login_payloads:
+            # Get token from login
+            token = login_and_get_token(login_url, login_payload)
+            if not token:
+                continue
+            
+            # Save token to file
+            save_token_to_file('data.txt', token)
 
-        # Read authorization tokens from file
-        authorization_tokens = read_authorizations('data.txt')
-        total_accounts = len(authorization_tokens)
+            # Read authorization tokens from file
+            authorization_tokens = read_authorizations('data.txt')
+            total_accounts = len(authorization_tokens)
 
-        # Handle tasks for each account
-        for i, authorization in enumerate(authorization_tokens):
-            handle_tasks(authorization, i, total_accounts)
+            # Handle tasks for each account
+            for i, authorization in enumerate(authorization_tokens):
+                handle_tasks(authorization, i, total_accounts)
 
-        # Countdown 1 hour before restarting
-        print('All accounts processed. Starting 1-hour countdown...')
-        countdown(3600)
+            # Countdown 1 hour before restarting
+            print('All accounts processed. Starting 1-hour countdown...')
+            countdown(3600)
 
 if __name__ == '__main__':
     main()
