@@ -2,8 +2,50 @@ import requests
 import time
 import json
 from datetime import datetime, timedelta
+from urllib.parse import parse_qs
 
-# Function to read authorization tokens from data.txt
+# Function to load and decode login payload from a file
+def load_login_payload(file_path):
+    with open(file_path, 'r') as file:
+        line = file.readline().strip()
+        # Parse the URL-encoded string into a dictionary
+        params = parse_qs(line)
+        # Extract the 'user' parameter and decode it from URL encoding
+        user_param = params.get('user', [])[0]
+        # Create the login payload dictionary
+        login_payload = {
+            'user': user_param,
+            'chat_instance': params.get('chat_instance', [''])[0],
+            'chat_type': params.get('chat_type', [''])[0],
+            'start_param': params.get('start_param', [''])[0],
+            'auth_date': params.get('auth_date', [''])[0],
+            'hash': params.get('hash', [''])[0],
+            'invite_id': params.get('invite_id', [''])[0]
+        }
+        return login_payload
+
+# Function to login and get authorization token
+def login_and_get_token(login_url, login_payload):
+    response = requests.get(login_url, params=login_payload)
+    if response.status_code == 200:
+        data = response.json()
+        if data['code'] == 0:
+            token = data['data']['token']
+            print(f'Login successful. Token: {token}')
+            return token
+        else:
+            print(f'Login failed. Code: {data["code"]}')
+            return None
+    else:
+        print(f'Login request failed. Status code: {response.status_code}')
+        return None
+
+# Function to save token to a file
+def save_token_to_file(file_path, token):
+    with open(file_path, 'w') as file:
+        file.write(token)
+
+# Function to read authorization tokens from file
 def read_authorizations(file_path):
     with open(file_path, 'r') as file:
         return [line.strip() for line in file]
@@ -42,7 +84,7 @@ def handle_tasks(authorization, account_index, total_accounts):
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate, br, zstd',
         'Accept-Language': 'en-GB,en;q=0.9,en-US;q=0.8',
-        'Authorization': authorization,
+        'Authorization': f'Bearer {authorization}',
         'Cache-Control': 'no-cache',
         'Content-Length': '28',
         'Content-Type': 'application/json',
@@ -86,9 +128,25 @@ def handle_tasks(authorization, account_index, total_accounts):
 
 # Main script execution
 def main():
+    login_file_path = 'data.txt'
+    login_url = 'https://api.prod.piggypiggy.io/tgBot/login'
+    
+    # Load login payload from file
+    login_payload = load_login_payload(login_file_path)
+
+    # Get token from login
+    token = login_and_get_token(login_url, login_payload)
+    if not token:
+        return
+    
+    # Save token to file
+    save_token_to_file('data.txt', token)
+
+    # Read authorization tokens from file
     authorization_tokens = read_authorizations('data.txt')
     total_accounts = len(authorization_tokens)
 
+    # Handle tasks for each account
     for i, authorization in enumerate(authorization_tokens):
         handle_tasks(authorization, i, total_accounts)
 
